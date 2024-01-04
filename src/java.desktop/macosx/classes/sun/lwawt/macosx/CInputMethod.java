@@ -91,6 +91,29 @@ public class CInputMethod extends InputMethodAdapter {
     public CInputMethod() {
     }
 
+    private void trace(String meth) {
+        /*
+        System.err.println("CInputMethod::" + meth + " : " +
+            "fAwtFocussedComponent = " + fAwtFocussedComponent + "  " +
+            "fIMContext = " + fIMContext);
+        */
+    }
+
+    private boolean isJFXPanel(Component component) {
+        // FIXME: need a more robust way to determine this
+        return "javafx.embed.swing.JFXPanel".equals(component.getClass().getName());
+    }
+
+    private void invokeAndWaitIME(Runnable runnable, Component component)
+            throws InvocationTargetException {
+
+        if (isJFXPanel(component)) {
+            System.err.println("Detected JFXPanel...run directly");
+            runnable.run();
+        } else {
+            LWCToolkit.invokeAndWait(runnable, component);
+        }
+    }
 
     /**
         * Sets the input method context, which is used to dispatch input method
@@ -587,7 +610,8 @@ public class CInputMethod extends InputMethodAdapter {
         final String[] retString = new String[1];
 
         try {
-            LWCToolkit.invokeAndWait(new Runnable() {
+            trace("attributedSubstringFromRange");
+            invokeAndWaitIME(new Runnable() {
                 public void run() { synchronized(retString) {
                     int location = locationIn;
                     int length = lengthIn;
@@ -639,7 +663,8 @@ public class CInputMethod extends InputMethodAdapter {
         final int[] returnValue = new int[2];
 
         try {
-            LWCToolkit.invokeAndWait(new Runnable() {
+            trace("selectedRange");
+            invokeAndWaitIME(new Runnable() {
                 public void run() { synchronized(returnValue) {
                     AttributedCharacterIterator theIterator = fIMContext.getSelectedText(null);
                     if (theIterator == null) {
@@ -690,7 +715,8 @@ public class CInputMethod extends InputMethodAdapter {
         final int[] returnValue = new int[2];
 
         try {
-            LWCToolkit.invokeAndWait(new Runnable() {
+            trace("markedRange");
+            invokeAndWaitIME(new Runnable() {
                 public void run() { synchronized(returnValue) {
                     // The insert position is always after the composed text, so the range start is the
                     // insert spot less the length of the composed text.
@@ -714,7 +740,8 @@ public class CInputMethod extends InputMethodAdapter {
         final int[] rect = new int[4];
 
         try {
-            LWCToolkit.invokeAndWait(new Runnable() {
+            trace("firstRectForCharacterRange");
+            invokeAndWaitIME(new Runnable() {
                 public void run() { synchronized(rect) {
                     int insertOffset = fIMContext.getInsertPositionOffset();
                     int composedTextOffset = absoluteTextOffset - insertOffset;
@@ -758,7 +785,8 @@ public class CInputMethod extends InputMethodAdapter {
         final int[] insertPositionOffset = new int[1];
 
         try {
-            LWCToolkit.invokeAndWait(new Runnable() {
+            trace("characterIndexForPoint");
+            invokeAndWaitIME(new Runnable() {
                 public void run() { synchronized(offsetInfo) {
                     offsetInfo[0] = fIMContext.getLocationOffset(screenX, screenY);
                     insertPositionOffset[0] = fIMContext.getInsertPositionOffset();
