@@ -720,6 +720,11 @@ public final class LWCToolkit extends LWToolkit {
      */
     public static void invokeAndWait(Runnable runnable, Component component)
             throws InvocationTargetException {
+        invokeAndWait(runnable, component, false);
+    }
+
+    static void invokeAndWait(Runnable runnable, Component component, boolean processEvents)
+            throws InvocationTargetException {
         Objects.requireNonNull(component, "Null component provided to invokeAndWait");
 
         long mediator = createAWTRunLoopMediator();
@@ -737,7 +742,7 @@ public final class LWCToolkit extends LWToolkit {
         SunToolkit.postEvent(appContext, invocationEvent);
         // 3746956 - flush events from PostEventQueue to prevent them from getting stuck and causing a deadlock
         SunToolkit.flushPendingEvents(appContext);
-        doAWTRunLoop(mediator, false);
+        doAWTRunLoop(mediator, processEvents);
 
         checkException(invocationEvent);
     }

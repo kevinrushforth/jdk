@@ -91,6 +91,13 @@ public class CInputMethod extends InputMethodAdapter {
     public CInputMethod() {
     }
 
+    private void trace(String meth) {
+        /*
+        System.err.println("CInputMethod::" + meth + " : " +
+            "fAwtFocussedComponent = " + fAwtFocussedComponent + "  " +
+            "fIMContext = " + fIMContext);
+        */
+    }
 
     /**
         * Sets the input method context, which is used to dispatch input method
@@ -587,6 +594,7 @@ public class CInputMethod extends InputMethodAdapter {
         final String[] retString = new String[1];
 
         try {
+            trace("attributedSubstringFromRange");
             LWCToolkit.invokeAndWait(new Runnable() {
                 public void run() { synchronized(retString) {
                     int location = locationIn;
@@ -623,7 +631,7 @@ public class CInputMethod extends InputMethodAdapter {
 
                     retString[0] = new String(selectedText);
                 }}
-            }, fAwtFocussedComponent);
+            }, fAwtFocussedComponent, true);
         } catch (InvocationTargetException ite) { ite.printStackTrace(); }
 
         synchronized(retString) { return retString[0]; }
@@ -639,6 +647,7 @@ public class CInputMethod extends InputMethodAdapter {
         final int[] returnValue = new int[2];
 
         try {
+            trace("selectedRange");
             LWCToolkit.invokeAndWait(new Runnable() {
                 public void run() { synchronized(returnValue) {
                     AttributedCharacterIterator theIterator = fIMContext.getSelectedText(null);
@@ -671,7 +680,7 @@ public class CInputMethod extends InputMethodAdapter {
                     returnValue[1] = theIterator.getEndIndex() - theIterator.getBeginIndex();
 
                 }}
-            }, fAwtFocussedComponent);
+            }, fAwtFocussedComponent, true);
         } catch (InvocationTargetException ite) { ite.printStackTrace(); }
 
         synchronized(returnValue) { return returnValue; }
@@ -690,13 +699,14 @@ public class CInputMethod extends InputMethodAdapter {
         final int[] returnValue = new int[2];
 
         try {
+            trace("markedRange");
             LWCToolkit.invokeAndWait(new Runnable() {
                 public void run() { synchronized(returnValue) {
                     // The insert position is always after the composed text, so the range start is the
                     // insert spot less the length of the composed text.
                     returnValue[0] = fIMContext.getInsertPositionOffset();
                 }}
-            }, fAwtFocussedComponent);
+            }, fAwtFocussedComponent, true);
         } catch (InvocationTargetException ite) { ite.printStackTrace(); }
 
         returnValue[1] = fCurrentTextLength;
@@ -714,6 +724,7 @@ public class CInputMethod extends InputMethodAdapter {
         final int[] rect = new int[4];
 
         try {
+            trace("firstRectForCharacterRange");
             LWCToolkit.invokeAndWait(new Runnable() {
                 public void run() { synchronized(rect) {
                     int insertOffset = fIMContext.getInsertPositionOffset();
@@ -743,7 +754,7 @@ public class CInputMethod extends InputMethodAdapter {
                         }
                     }
                 }}
-            }, fAwtFocussedComponent);
+            }, fAwtFocussedComponent, true);
         } catch (InvocationTargetException ite) { ite.printStackTrace(); }
 
         synchronized(rect) { return rect; }
@@ -758,12 +769,13 @@ public class CInputMethod extends InputMethodAdapter {
         final int[] insertPositionOffset = new int[1];
 
         try {
+            trace("characterIndexForPoint");
             LWCToolkit.invokeAndWait(new Runnable() {
                 public void run() { synchronized(offsetInfo) {
                     offsetInfo[0] = fIMContext.getLocationOffset(screenX, screenY);
                     insertPositionOffset[0] = fIMContext.getInsertPositionOffset();
                 }}
-            }, fAwtFocussedComponent);
+            }, fAwtFocussedComponent, true);
         } catch (InvocationTargetException ite) { ite.printStackTrace(); }
 
         // This bit of gymnastics ensures that the returned location is within the composed text.
