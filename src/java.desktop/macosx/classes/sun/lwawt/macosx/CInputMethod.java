@@ -50,6 +50,11 @@ public class CInputMethod extends InputMethodAdapter {
     private LWComponentPeer<?, ?> fAwtFocussedComponentPeer;
     private boolean isActive;
 
+    private boolean wasCalledReentrantly = false;
+    private int count = 0; // check for reentrant calls
+    private int nextSeqNum = 0; // used to match calls from IME and their execution
+    private int lastExecSeqNum = 0; // used to check for out of order calls
+
     private static Map<TextAttribute, Integer>[] sHighlightStyles;
 
     // Intitalize highlight mapping table and its mapper.
@@ -97,6 +102,49 @@ public class CInputMethod extends InputMethodAdapter {
             "fAwtFocussedComponent = " + fAwtFocussedComponent + "  " +
             "fIMContext = " + fIMContext);
         */
+    }
+
+    private void enterIME() {
+        ++count;
+
+        if (count > 1) {
+            wasCalledReentrantly = true;
+            System.err.println("enterIME: count = " + count);
+        }
+    }
+
+    private void leaveIME() {
+        --count;
+
+        if (wasCalledReentrantly) {
+            System.err.println("leaveIME: count = " + count);
+            if (count == 0) {
+                wasCalledReentrantly = false;
+            }
+        }
+
+        if (count < 0) {
+            System.err.println("*** ERROR: IME enter / leave mismatch");
+        }
+    }
+
+    int getSeqNum() {
+        return ++nextSeqNum;
+    }
+
+    void begin(int seqNum) {
+        //System.err.println("begin IME call " + seqNum);
+        if (seqNum != (lastExecSeqNum + 1)) {
+            System.err.println("***** ERROR: begin: seqNum = " + seqNum + "  lastExecSeqNum = " + lastExecSeqNum);
+        }
+    }
+
+    void end(int seqNum) {
+        //System.err.println("end IME call " + seqNum);
+        if (seqNum != (lastExecSeqNum + 1)) {
+            System.err.println("***** ERROR: end: seqNum = " + seqNum + "  lastExecSeqNum = " + lastExecSeqNum);
+        }
+        lastExecSeqNum = seqNum;
     }
 
     /**
@@ -594,9 +642,12 @@ public class CInputMethod extends InputMethodAdapter {
         final String[] retString = new String[1];
 
         try {
+            enterIME();
             trace("attributedSubstringFromRange");
+            final int seqNum = getSeqNum();
             LWCToolkit.invokeAndWait(new Runnable() {
                 public void run() { synchronized(retString) {
+                    begin(seqNum); try {
                     int location = locationIn;
                     int length = lengthIn;
 
@@ -630,9 +681,13 @@ public class CInputMethod extends InputMethodAdapter {
                     }
 
                     retString[0] = new String(selectedText);
+                    } finally { end(seqNum); }
                 }}
             }, fAwtFocussedComponent, true);
         } catch (InvocationTargetException ite) { ite.printStackTrace(); }
+        finally {
+            leaveIME();
+        }
 
         synchronized(retString) { return retString[0]; }
     }
@@ -647,9 +702,12 @@ public class CInputMethod extends InputMethodAdapter {
         final int[] returnValue = new int[2];
 
         try {
+            enterIME();
             trace("selectedRange");
+            final int seqNum = getSeqNum();
             LWCToolkit.invokeAndWait(new Runnable() {
                 public void run() { synchronized(returnValue) {
+                    begin(seqNum); try {
                     AttributedCharacterIterator theIterator = fIMContext.getSelectedText(null);
                     if (theIterator == null) {
                         returnValue[0] = fIMContext.getInsertPositionOffset();
@@ -679,9 +737,13 @@ public class CInputMethod extends InputMethodAdapter {
                     returnValue[0] = startLocation;
                     returnValue[1] = theIterator.getEndIndex() - theIterator.getBeginIndex();
 
+                    } finally { end(seqNum); }
                 }}
             }, fAwtFocussedComponent, true);
         } catch (InvocationTargetException ite) { ite.printStackTrace(); }
+        finally {
+            leaveIME();
+        }
 
         synchronized(returnValue) { return returnValue; }
     }
@@ -699,15 +761,22 @@ public class CInputMethod extends InputMethodAdapter {
         final int[] returnValue = new int[2];
 
         try {
+            enterIME();
             trace("markedRange");
+            final int seqNum = getSeqNum();
             LWCToolkit.invokeAndWait(new Runnable() {
                 public void run() { synchronized(returnValue) {
+                    begin(seqNum); try {
                     // The insert position is always after the composed text, so the range start is the
                     // insert spot less the length of the composed text.
                     returnValue[0] = fIMContext.getInsertPositionOffset();
+                    } finally { end(seqNum); }
                 }}
             }, fAwtFocussedComponent, true);
         } catch (InvocationTargetException ite) { ite.printStackTrace(); }
+        finally {
+            leaveIME();
+        }
 
         returnValue[1] = fCurrentTextLength;
         synchronized(returnValue) { return returnValue; }
@@ -724,9 +793,12 @@ public class CInputMethod extends InputMethodAdapter {
         final int[] rect = new int[4];
 
         try {
+            enterIME();
             trace("firstRectForCharacterRange");
+            final int seqNum = getSeqNum();
             LWCToolkit.invokeAndWait(new Runnable() {
                 public void run() { synchronized(rect) {
+                    begin(seqNum); try {
                     int insertOffset = fIMContext.getInsertPositionOffset();
                     int composedTextOffset = absoluteTextOffset - insertOffset;
                     if (composedTextOffset < 0) composedTextOffset = 0;
@@ -753,9 +825,13 @@ public class CInputMethod extends InputMethodAdapter {
                             g.dispose();
                         }
                     }
+                    } finally { end(seqNum); }
                 }}
             }, fAwtFocussedComponent, true);
         } catch (InvocationTargetException ite) { ite.printStackTrace(); }
+        finally {
+            leaveIME();
+        }
 
         synchronized(rect) { return rect; }
     }
@@ -769,14 +845,21 @@ public class CInputMethod extends InputMethodAdapter {
         final int[] insertPositionOffset = new int[1];
 
         try {
+            enterIME();
             trace("characterIndexForPoint");
+            final int seqNum = getSeqNum();
             LWCToolkit.invokeAndWait(new Runnable() {
                 public void run() { synchronized(offsetInfo) {
+                    begin(seqNum); try {
                     offsetInfo[0] = fIMContext.getLocationOffset(screenX, screenY);
                     insertPositionOffset[0] = fIMContext.getInsertPositionOffset();
+                    } finally { end(seqNum); }
                 }}
             }, fAwtFocussedComponent, true);
         } catch (InvocationTargetException ite) { ite.printStackTrace(); }
+        finally {
+            leaveIME();
+        }
 
         // This bit of gymnastics ensures that the returned location is within the composed text.
         // If it falls outside that region, the input method will commit the text, which is inconsistent with native
