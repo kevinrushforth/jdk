@@ -99,16 +99,25 @@ public class CInputMethod extends InputMethodAdapter {
         */
     }
 
+    private static final String JFXPANEL_CLASS_NAME = "javafx.embed.swing.JFXPanel";
+    private static final Module desktopModule = Component.class.getModule();
+
     private boolean isJFXPanel(Component component) {
-        // FIXME: need a more robust way to determine this
-        return "javafx.embed.swing.JFXPanel".equals(component.getClass().getName());
+        for (Class<?> clazz = component.getClass(); clazz != null; clazz = clazz.getSuperclass()) {
+            if (desktopModule.equals(clazz.getModule())) {
+                // Stop searching once we have a class from the desktop module
+                return false;
+            } else if (JFXPANEL_CLASS_NAME.equals(clazz.getName())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void invokeAndWaitIME(Runnable runnable, Component component)
             throws InvocationTargetException {
 
         if (isJFXPanel(component)) {
-            System.err.println("Detected JFXPanel...run directly");
             runnable.run();
         } else {
             LWCToolkit.invokeAndWait(runnable, component);
